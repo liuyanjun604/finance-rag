@@ -1,10 +1,14 @@
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import HumanMessage, SystemMessage
+from dotenv import load_dotenv
+import os
+
+load_dotenv()  
 
 # 初始化模型
 llm = ChatOpenAI(
-    api_key="sk-ecroneknxsvqdvwhdksbtfowceftjlyhflvqhvotfrrupreb",
+    api_key=os.getenv("SILICONFLOW_API_KEY"),
     base_url="https://api.siliconflow.com/v1",
     model="Qwen/Qwen2.5-7B-Instruct"
 )
