@@ -27,3 +27,42 @@ prompt = ChatPromptTemplate.from_messages([
 chain = prompt | llm
 response2 = chain.invoke({"concept": "复利"})
 print(response2.content)
+
+# ── 第三步：多轮对话记忆 ───────────────────
+print("\n=== 多轮对话 ===")
+from langchain_core.chat_history import InMemoryChatMessageHistory
+from langchain_core.runnables.history import RunnableWithMessageHistory
+
+history_store = {}
+
+def get_session_history(session_id: str):
+    if session_id not in history_store:
+        history_store[session_id] = InMemoryChatMessageHistory()
+    return history_store[session_id]
+
+prompt_with_history = ChatPromptTemplate.from_messages([
+    ("system", "你是一个专业的金融助手。"),
+    ("placeholder", "{chat_history}"),
+    ("user", "{input}")
+])
+
+chain_with_history = RunnableWithMessageHistory(
+    prompt_with_history | llm,
+    get_session_history,
+    input_messages_key="input",
+    history_messages_key="chat_history"
+)
+
+# 第一轮
+r1 = chain_with_history.invoke(
+    {"input": "我叫刘彦君，我在学习金融知识。"},
+    config={"configurable": {"session_id": "test"}}
+)
+print("第一轮:", r1.content)
+
+# 第二轮 - 测试它是否记得
+r2 = chain_with_history.invoke(
+    {"input": "我叫什么名字？我在学什么？"},
+    config={"configurable": {"session_id": "test"}}
+)
+print("第二轮:", r2.content)
