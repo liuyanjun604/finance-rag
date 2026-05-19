@@ -1,9 +1,13 @@
 import os
 from openai import OpenAI
+from dotenv import load_dotenv
+import os
+
+load_dotenv()  
 
 # 配置 API Key 和硅基流动的地址
 client = OpenAI(
-    api_key="sk-ecroneknxsvqdvwhdksbtfowceftjlyhflvqhvotfrrupreb",
+    api_key=os.getenv("SILICONFLOW_API_KEY"),
     base_url="https://api.siliconflow.com/v1"
 )
 
