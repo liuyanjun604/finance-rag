@@ -12,9 +12,7 @@ import os
 
 app = FastAPI()
 
-# 这里需要初始化：llm、embeddings、splitter、chroma client
-# 思考：为什么要放在这里而不是放在函数里面？
-#  初始化模型
+# 初始化：llm、embeddings、splitter、chroma client
 load_dotenv() 
 llm = ChatOpenAI(
     api_key=os.getenv("SILICONFLOW_API_KEY"),
