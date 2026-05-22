@@ -5,7 +5,7 @@ import PyPDF2
 from langchain_openai import OpenAIEmbeddings
 from langchain_openai import ChatOpenAI
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 import chromadb
 from dotenv import load_dotenv
 import os
@@ -30,9 +30,6 @@ embeddings = OpenAIEmbeddings(
 # 共享的 collection
 client = chromadb.Client()
 collection = client.create_collection("annual_report")
-
-class AskRequest(BaseModel):
-    question: str
 
 @app.post("/upload")
 async def upload(file: UploadFile = File(...)):
@@ -73,6 +70,16 @@ async def upload(file: UploadFile = File(...)):
     return {"status": "ok", "chunks": len(texts)}
     pass
 
+class AskRequest(BaseModel):
+    question: str
+    history: list = []  # 新增，默认空列表
+
+# 历史记录的格式：
+# [
+#     {"role": "user", "content": "上一个问题"},
+#     {"role": "assistant", "content": "上一个回答"}
+# ]
+
 @app.post("/ask")
 async def ask(request: AskRequest):
     # 1. 把问题转成向量
@@ -93,12 +100,23 @@ async def ask(request: AskRequest):
         source.append(meta["page"])
 
     # 4. LLM 回答
-    response = llm.invoke([
-    SystemMessage(content=f"""你是一个金融文档助手，只根据以下内容回答问题，不要使用其他知识：
+    # 构建 messages
+    messages = [
+    SystemMessage(content=f"""你是一个金融文档助手，只根据以下内容回答问题：
     {content}
-    如果文档中没有相关信息，请说"文档中未提及"。"""),
-    HumanMessage(content=request.question)
-    ])
+    如果文档中没有相关信息，请说"文档中未提及"。""")
+    ]
+    # 把历史对话加进去
+    for msg in request.history:
+        if msg["role"] == "user":
+            messages.append(HumanMessage(content=msg["content"]))
+        else:
+            messages.append(AIMessage(content=msg["content"]))
+
+    # 最后加上当前问题
+    messages.append(HumanMessage(content=request.question))
+
+    response = llm.invoke(messages)
 
     # 5. 返回 {"answer": "...", "sources": [页码列表]}
     return {"answer": response.content, "sources": source}
