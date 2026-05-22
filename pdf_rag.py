@@ -43,13 +43,11 @@ for item in raw_texts:
         texts.append(chunk)
         metadatas.append({"page": item["page"]})
 
-# print(f"总块数：{len(texts)}")
-
 vectors = embeddings.embed_documents(texts)
 
 #存入chroma
-clinet = chromadb.Client()
-collection = clinet.create_collection("annual_report")
+client = chromadb.Client()
+collection = client.create_collection("annual_report")
 
 collection.add(
     documents=texts,
@@ -58,8 +56,6 @@ collection.add(
     ids=[f"id{i}" for i in range(len(texts))]
 )
 
-# query = "Citi net income 2024 full year results"
-# query = "net income available to common shareholders 2024"
 query = "Citigroup net income 2024 2025 annual results billions"
 #检索相关内容
 query_vector = embeddings.embed_query(query)
@@ -67,20 +63,16 @@ results = collection.query(
     query_embeddings=[query_vector],
     n_results=8
 )
-#把检索结果塞进 prompt 
-content = ""
-for doc in results["documents"][0]:
-    content = content + doc
 
-for i, (doc, meta) in enumerate(zip(results["documents"][0], results["metadatas"][0])):
-    print(f"--- 第{i+1}个结果（第{meta['page']}页）---")
-    print(doc[:500])
-
-#LLM 根据这段内容回答
-# response = llm.invoke([
-#     SystemMessage(content=f"""你是一个金融文档助手，只根据以下内容回答问题，不要使用其他知识：
-#     {content}
-#     如果文档中没有相关信息，请说"文档中未提及"。"""),
-#     HumanMessage(content=query)
-# ])
-# print(response.content)
+# 把检索结果塞进 prompt 
+content = []
+for doc in results["documents"]:
+    content.append(doc)
+# LLM 根据这段内容回答
+response = llm.invoke([
+    SystemMessage(content=f"""你是一个金融文档助手，只根据以下内容回答问题，不要使用其他知识：
+    {content}
+    如果文档中没有相关信息，请说"文档中未提及"。"""),
+    HumanMessage(content=query)
+])
+print(response.content)
