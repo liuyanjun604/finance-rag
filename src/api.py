@@ -10,6 +10,7 @@ from fastapi.responses import StreamingResponse
 import chromadb
 from dotenv import load_dotenv
 import os
+from src.config import BASE_URL, LLM_MODEL, EMBEDDING_MODEL, CHUNK_SIZE, CHUNK_OVERLAP, N_RESULTS
 
 app = FastAPI()
 
@@ -17,14 +18,14 @@ app = FastAPI()
 load_dotenv() 
 llm = ChatOpenAI(
     api_key=os.getenv("SILICONFLOW_API_KEY"),
-    base_url="https://api.siliconflow.com/v1",
-    model="Qwen/Qwen2.5-7B-Instruct"
+    base_url=BASE_URL,
+    model=LLM_MODEL
 )
 
 embeddings = OpenAIEmbeddings(
     api_key=os.getenv("SILICONFLOW_API_KEY"),
-    base_url="https://api.siliconflow.com/v1",
-    model="Qwen/Qwen3-Embedding-0.6B"
+    base_url=BASE_URL,
+    model=EMBEDDING_MODEL
 )
 
 
@@ -48,8 +49,8 @@ async def upload(file: UploadFile = File(...)):
             raw_texts.append({"text": text, "page": i+1})
     # 3. 分块
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
-        chunk_overlap=100
+        chunk_size=CHUNK_SIZE,
+        chunk_overlap=CHUNK_OVERLAP
     )
     texts = []
     metadatas = []
@@ -89,7 +90,7 @@ async def ask(request: AskRequest):
     # 2. 检索 collection
     results = collection.query(
         query_embeddings=[query_vector],
-        n_results=5
+        n_results=N_RESULTS
     )
 
     # 3. 拼接 prompt
@@ -133,7 +134,7 @@ async def ask_stream(request: AskRequest):
     # 2. 检索 collection
     results = collection.query(
         query_embeddings=[query_vector],
-        n_results=5
+        n_results=N_RESULTS
     )
 
     # 3. 拼接 prompt
