@@ -180,7 +180,7 @@ async def ask_stream(request: AskRequest):
     #     for chunk in llm_with_tools.stream(messages):
     #         yield chunk.content
     def generate():
-        for chunk in llm.stream(messages):
+        for chunk in llm_with_tools.stream(messages):
             yield chunk.content
 
     return StreamingResponse(generate(), media_type="text/plain")
