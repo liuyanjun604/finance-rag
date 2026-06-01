@@ -5,7 +5,7 @@ from fastapi import FastAPI
 import os
 from config import BASE_URL, LLM_MODEL
 from langchain_core.messages import HumanMessage, ToolMessage
-
+import yfinance as yf
 
 app = FastAPI()
 load_dotenv() 
@@ -19,13 +19,9 @@ llm = ChatOpenAI(
 @tool
 def get_stock_price(ticker: str) -> str:
     """查询股票价格，输入股票代码，返回当前价格。"""
-    # 先用假数据
-    prices = {
-        "AAPL": "182.50",
-        "C": "63.20",    # 花旗股票代码
-        "TSLA": "245.80"
-    }
-    return prices.get(ticker.upper(), "未找到该股票")
+    ticker = yf.Ticker(ticker)  # 花旗股票代码
+    price = ticker.fast_info.last_price  # 获取最新价格
+    return f"{ticker} 当前股价为 ${price:.2f}"
 
 # 第二步：把工具绑定给 LLM
 llm_with_tools = llm.bind_tools([get_stock_price])
