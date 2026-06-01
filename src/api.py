@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 import os
 from config import BASE_URL, LLM_MODEL, EMBEDDING_MODEL, CHUNK_SIZE, CHUNK_OVERLAP, N_RESULTS
 from tool_calling import get_stock_price
+from agent import app as agent_app
 
 app = FastAPI()
 
@@ -163,25 +164,9 @@ async def ask_stream(request: AskRequest):
     # 最后加上当前问题
     messages.append(HumanMessage(content=request.question))
 
-    #LLM 自动判断要不要调用工具
-    llm_with_tools = llm.bind_tools([get_stock_price])
-    response_with_tools = llm_with_tools.invoke(messages) 
-    if response_with_tools.tool_calls:
-        messages.append(response_with_tools)
-        # 执行每个工具调用
-        for tool_call in response_with_tools.tool_calls:
-            tool_result = get_stock_price.invoke(tool_call["args"])
-            messages.append(ToolMessage(
-                content=tool_result,
-                    tool_call_id=tool_call["id"]
-        ))
-    print(messages)
-    # def generate():
-    #     for chunk in llm_with_tools.stream(messages):
-    #         yield chunk.content
-    def generate():
-        for chunk in llm_with_tools.stream(messages):
-            yield chunk.content
+    response = agent_app.invoke({"messages": messages})
 
+    def generate():
+        yield response["messages"][-1].content
     return StreamingResponse(generate(), media_type="text/plain")
     pass
