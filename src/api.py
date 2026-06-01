@@ -166,15 +166,19 @@ async def ask_stream(request: AskRequest):
     #LLM 自动判断要不要调用工具
     llm_with_tools = llm.bind_tools([get_stock_price])
     response_with_tools = llm_with_tools.invoke(messages) 
-    messages.append(response_with_tools)
-    # 执行每个工具调用
-    for tool_call in response_with_tools.tool_calls:
-        tool_result = get_stock_price.invoke(tool_call["args"])
-        messages.append(ToolMessage(
-            content=tool_result,
-             tool_call_id=tool_call["id"]
-    ))
-        
+    if response_with_tools.tool_calls:
+        messages.append(response_with_tools)
+        # 执行每个工具调用
+        for tool_call in response_with_tools.tool_calls:
+            tool_result = get_stock_price.invoke(tool_call["args"])
+            messages.append(ToolMessage(
+                content=tool_result,
+                    tool_call_id=tool_call["id"]
+        ))
+    print(messages)
+    # def generate():
+    #     for chunk in llm_with_tools.stream(messages):
+    #         yield chunk.content
     def generate():
         for chunk in llm.stream(messages):
             yield chunk.content

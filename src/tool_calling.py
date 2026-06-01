@@ -19,9 +19,14 @@ llm = ChatOpenAI(
 @tool
 def get_stock_price(ticker: str) -> str:
     """查询股票价格，输入股票代码，返回当前价格。"""
-    ticker = yf.Ticker(ticker)  # 花旗股票代码
-    price = ticker.fast_info.last_price  # 获取最新价格
-    return f"{ticker} 当前股价为 ${price:.2f}"
+    try:
+        stock = yf.Ticker(ticker)
+        price = stock.fast_info.last_price
+        if price is None:
+            return f"未能获取 {ticker} 的股价，请稍后再试"
+        return f"{ticker} 当前股价为 ${price:.2f}"
+    except Exception as e:
+        return f"查询失败：{str(e)}"
 
 # 第二步：把工具绑定给 LLM
 llm_with_tools = llm.bind_tools([get_stock_price])

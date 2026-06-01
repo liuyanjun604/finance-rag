@@ -43,4 +43,6 @@ if question:
     with st.chat_message("assistant"):
         answer = st.write_stream(response.iter_content(chunk_size=None, decode_unicode=True))
     # 历史记录用 answer
-    st.session_state.history.append({"role": "assistant", "content": answer})
+    if answer:  # 只有有内容才存进历史
+        st.session_state.history.append({"role": "user", "content": question})
+        st.session_state.history.append({"role": "assistant", "content": answer})
