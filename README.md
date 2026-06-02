@@ -14,6 +14,7 @@ Built with real-world financial domain knowledge from 3 years of experience at C
 - Interactive web UI with Streamlit
 - Tool Calling support: real-time stock price queries via function calling
 - LangGraph Agent: autonomous tool-calling loop with state management
+- Hybrid search: combines BM25 keyword search and vector similarity for better retrieval
 
 ## Tech Stack
 
