@@ -37,6 +37,8 @@ def vector_search(query: str, collection) -> list:
     return top_indices
 
 def hybrid_search(texts: list, query: str, collection) -> list:
+    if not texts:
+        return []  # 没有文档直接返回空列表
     bm25_indices = bm25_search(texts, query)
     vector_indices = vector_search(query, collection)
     # 合并去重，保持顺序

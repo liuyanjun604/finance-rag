@@ -13,9 +13,11 @@ uploaded_file = st.file_uploader("上传 PDF 文件", type=["pdf"])
 if uploaded_file is not None:
     # 调用 /upload 接口
     # 显示成功信息
-    response = requests.post(upload_url, files={"file": (uploaded_file.name, uploaded_file, "application/pdf")})
-    result = response.json()
-    st.success(f"上传成功，共处理 {result['chunks']} 个块")
+    if "uploaded" not in st.session_state or st.session_state.uploaded != uploaded_file.name:
+        response = requests.post(upload_url, files={"file": (uploaded_file.name, uploaded_file, "application/pdf")})
+        result = response.json()
+        st.success(f"上传成功，共处理 {result['chunks']} 个块")
+        st.session_state.uploaded = uploaded_file.name
 
 
 # 渲染历史记录

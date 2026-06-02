@@ -94,15 +94,15 @@ class AskRequest(BaseModel):
 async def ask_stream(request: AskRequest):
     # 联合检索
     content = hybrid_search(all_texts, request.question, collection)
+
     # LLM 回答
     # 构建 messages
+    doc_context = f"参考以下文档内容回答：\n{content}" if content else "没有上传文档，请根据你自己的知识回答。"
     messages = [
-    SystemMessage(content=f"""你是一个金融文档助手，可以通过以下两种方式回答问题：
-    1. 如果问题可以从以下文档内容中找到答案，直接根据文档回答：
-    {content}
-    2. 如果问题需要实时数据（如股票价格），使用工具获取。
-    如果文档中没有相关信息且没有合适的工具，请说"文档中未提及"。""")
-    ]        
+        SystemMessage(content=f"""你是一个金融助手，可以通过以下两种方式回答问题：
+        1. {doc_context}
+        2. 如果问题需要实时数据（如股票价格），使用工具获取。""")
+    ]   
     # 把历史对话加进去
     for msg in request.history:
         if msg["role"] == "user":
