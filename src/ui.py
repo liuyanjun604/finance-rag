@@ -6,7 +6,6 @@ if "history" not in st.session_state:
     st.session_state.history = []
 
 st.title("金融文档问答系统")
-ask_url = "http://127.0.0.1:8000/ask"
 ask_url_stream = "http://127.0.0.1:8000/ask-stream"
 upload_url = "http://127.0.0.1:8000/upload"
 #上传文件

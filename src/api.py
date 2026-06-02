@@ -11,8 +11,9 @@ import chromadb
 from dotenv import load_dotenv
 import os
 from config import BASE_URL, LLM_MODEL, EMBEDDING_MODEL, CHUNK_SIZE, CHUNK_OVERLAP, N_RESULTS
-from tool_calling import get_stock_price
+from hybrid_search import hybrid_search
 from agent import app as agent_app
+
 
 app = FastAPI()
 
@@ -34,6 +35,9 @@ embeddings = OpenAIEmbeddings(
 # 共享的 collection
 client = chromadb.Client()
 collection = client.create_collection("annual_report")
+
+#全局变量
+all_texts = []  # 存储所有文档块
 
 @app.post("/upload")
 async def upload(file: UploadFile = File(...)):
@@ -61,6 +65,8 @@ async def upload(file: UploadFile = File(...)):
         for chunk in chunks:
             texts.append(chunk)
             metadatas.append({"page":item["page"]})
+    global all_texts
+    all_texts = texts
     # 4. 生成向量
     vectors = embeddings.embed_documents(texts)
     # 5. 存入 collection
@@ -84,68 +90,11 @@ class AskRequest(BaseModel):
 #     {"role": "assistant", "content": "上一个回答"}
 # ]
 
-@app.post("/ask")
-async def ask(request: AskRequest):
-    # 1. 把问题转成向量
-    query_vector = embeddings.embed_query(request.question)
-
-    # 2. 检索 collection
-    results = collection.query(
-        query_embeddings=[query_vector],
-        n_results=N_RESULTS
-    )
-
-    # 3. 拼接 prompt
-    content = []
-    source = []
-    for doc in results["documents"][0]:
-        content.append(doc)
-    for meta in results["metadatas"][0]:
-        source.append(meta["page"])
-
-    # 4. LLM 回答
-    # 构建 messages
-    messages = [
-    SystemMessage(content=f"""你是一个金融文档助手，只根据以下内容回答问题：
-    {content}
-    如果文档中没有相关信息，请说"文档中未提及"。""")
-    ]
-    # 把历史对话加进去
-    for msg in request.history:
-        if msg["role"] == "user":
-            messages.append(HumanMessage(content=msg["content"]))
-        else:
-            messages.append(AIMessage(content=msg["content"]))
-
-    # 最后加上当前问题
-    messages.append(HumanMessage(content=request.question))
-
-    response = llm.invoke(messages)
-
-    # 5. 返回 {"answer": "...", "sources": [页码列表]}
-    return {"answer": response.content, "sources": source}
-    pass
-
-
-
 @app.post("/ask-stream")
 async def ask_stream(request: AskRequest):
-    # 1. 把问题转成向量
-    query_vector = embeddings.embed_query(request.question)
-
-    # 2. 检索 collection
-    results = collection.query(
-        query_embeddings=[query_vector],
-        n_results=N_RESULTS
-    )
-
-    # 3. 拼接 prompt
-    content = []
-    source = []
-    for doc in results["documents"][0]:
-        content.append(doc)
-
-    # 4. LLM 回答
+    # 联合检索
+    content = hybrid_search(all_texts, request.question, collection)
+    # LLM 回答
     # 构建 messages
     messages = [
     SystemMessage(content=f"""你是一个金融文档助手，可以通过以下两种方式回答问题：

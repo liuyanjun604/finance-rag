@@ -7,4 +7,4 @@ BASE_URL = "https://api.siliconflow.com/v1"
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 100
 
-N_RESULTS = 8
+N_RESULTS = 5
