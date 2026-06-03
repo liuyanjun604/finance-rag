@@ -11,16 +11,18 @@ embeddings = OpenAIEmbeddings(
     model=EMBEDDING_MODEL
 )
 
-def bm25_search(texts: list, query: str) -> list:
-    # 1. 把每个文档块分词（简单按空格切）
+def build_bm25_index(texts: list) -> BM25Okapi:
+    # 把每个文档块分词（简单按空格切），建立 BM25 索引
+    # 上传时构建一次，查询时复用，避免每次查询都重建
     tokenized_corpus = [doc.split() for doc in texts]
-    # 2. 建立 BM25 索引
-    bm25 = BM25Okapi(tokenized_corpus)
-    # 3. 查询分词
+    return BM25Okapi(tokenized_corpus)
+
+def bm25_search(bm25: BM25Okapi, query: str) -> list:
+    # 1. 查询分词
     tokenized_query = query.split()
-    # 4. 获取每个文档的分数
+    # 2. 用预建索引获取每个文档的分数
     scores = bm25.get_scores(tokenized_query)
-    # 5. 返回 N_RESULTS 个文档的索引
+    # 3. 返回 N_RESULTS 个文档的索引
     top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:N_RESULTS]
     return top_indices
 
@@ -36,10 +38,10 @@ def vector_search(query: str, collection) -> list:
     top_indices = [int(id.replace("id", "")) for id in results["ids"][0]]
     return top_indices
 
-def hybrid_search(texts: list, query: str, collection) -> list:
-    if not texts:
+def hybrid_search(texts: list, query: str, collection, bm25: BM25Okapi) -> list:
+    if not texts or bm25 is None:
         return []  # 没有文档直接返回空列表
-    bm25_indices = bm25_search(texts, query)
+    bm25_indices = bm25_search(bm25, query)
     vector_indices = vector_search(query, collection)
     # 合并去重，保持顺序
     combined = list(dict.fromkeys(bm25_indices + vector_indices))

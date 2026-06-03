@@ -11,7 +11,7 @@ import chromadb
 from dotenv import load_dotenv
 import os
 from config import BASE_URL, LLM_MODEL, EMBEDDING_MODEL, CHUNK_SIZE, CHUNK_OVERLAP, N_RESULTS
-from hybrid_search import hybrid_search
+from hybrid_search import hybrid_search, build_bm25_index
 from agent import app as agent_app
 
 
@@ -38,6 +38,7 @@ collection = client.create_collection("annual_report")
 
 #全局变量
 all_texts = []  # 存储所有文档块
+bm25_index = None  # 上传时预建的 BM25 索引，查询时复用
 
 @app.post("/upload")
 async def upload(file: UploadFile = File(...)):
@@ -65,8 +66,10 @@ async def upload(file: UploadFile = File(...)):
         for chunk in chunks:
             texts.append(chunk)
             metadatas.append({"page":item["page"]})
-    global all_texts
+    global all_texts, bm25_index
     all_texts = texts
+    # 预建 BM25 索引，避免每次查询都重建
+    bm25_index = build_bm25_index(texts)
     # 4. 生成向量
     vectors = embeddings.embed_documents(texts)
     # 5. 存入 collection
@@ -93,7 +96,7 @@ class AskRequest(BaseModel):
 @app.post("/ask-stream")
 async def ask_stream(request: AskRequest):
     # 联合检索
-    content = hybrid_search(all_texts, request.question, collection)
+    content = hybrid_search(all_texts, request.question, collection, bm25_index)
 
     # LLM 回答
     # 构建 messages
