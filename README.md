@@ -39,9 +39,13 @@ Built with real-world financial domain knowledge from 3 years of experience at C
           ↓
     User asks a question
           ↓
-    Question → vector → retrieve top-k chunks
+    Hybrid search: BM25 keyword + vector similarity → merge top-k chunks
           ↓
-    Chunks + history → LLM prompt → streaming response
+    Chunks + history → LangGraph Agent
+          ↓
+    Agent decides: answer from docs, or call tools (e.g. stock price)
+          ↓
+    Streaming response
 
 ## Getting Started
 
@@ -73,17 +77,19 @@ Open `http://localhost:8501` in your browser.
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/upload` | Upload a PDF file for processing |
-| POST | `/ask` | Ask a question (returns JSON) |
-| POST | `/ask-stream` | Ask a question (streaming response) |
+| POST | `/upload` | Upload a PDF file for parsing, chunking, and indexing |
+| POST | `/ask-stream` | Ask a question (streaming response, with conversation history) |
 
 ## Project Structure
 
     finance-rag/
     ├── src/
-    │   ├── api.py        # FastAPI backend
-    │   ├── ui.py         # Streamlit frontend
-    │   └── config.py     # Configuration parameters
+    │   ├── api.py            # FastAPI backend: /upload and /ask-stream endpoints
+    │   ├── ui.py             # Streamlit frontend: chat UI with file upload
+    │   ├── agent.py          # LangGraph Agent: autonomous tool-calling loop
+    │   ├── hybrid_search.py  # Hybrid retrieval: BM25 keyword + vector search
+    │   ├── tool_calling.py   # Tools: real-time stock price query (yfinance)
+    │   └── config.py         # Configuration parameters
     ├── .gitignore
     ├── requirements.txt
     └── README.md
